@@ -1,7 +1,7 @@
 " vim:ff=unix ts=4 ss=4
 " vim60:fdm=marker
 " \file		copycppdectoimp.vim
-" \date		Sun, 04 May 2003 02:28 Pacific Daylight Time
+" \date		Tue, 03 Jun 2003 02:21 Pacific Daylight Time
 "
 " \brief	This provides a function that you can call in your header file
 "			(with cursor on the function to be placed into your souce file) and
@@ -24,9 +24,14 @@
 " \note		Emial addresses are Rot13ed. Place cursor in the <> and do a g?i<
 " \note		This file and work is based on Leif Wickland's VIM-TIP#335
 " \version	$Id: copycppdectoimp.vim,v 1.3 2002/10/29 06:14:16 root Exp $
-" Version:	0.45
+" Version:	0.46
 " History: {{{
-"	[Feral:124/03@02:13] 0.55
+"	[Feral:154/03@02:12] 0.46
+"		Refined matching declaration prens; should be more resistant to
+"		mismatched prens outside of the function declaration. Mismatched prens
+"		inside the function declaration (i.e. in comments) will confuse this
+"		still.
+"	[Feral:124/03@02:13] 0.45
 "		Bug fix: more robust handling of comments and prens and things in
 "			multi line function declorations.
 "	[Feral:095/03@00:33] 0.44
@@ -183,6 +188,7 @@ let b:loaded_copycppdectoimp = 1
 
 "*****************************************************************
 " Functions: {{{
+
 if !exists("*s:GrabFromHeaderPasteInSource(...)")
 function s:GrabFromHeaderPasteInSource(...) "{{{
 	let l:WhatToDo = 0 " 0 = get header, else put header.
@@ -265,14 +271,19 @@ function s:GrabFromHeaderPasteInSource(...) "{{{
 			execute "normal! 0f("
 		endif
 		" Important that End comes first, this gets us into the ()...
-"		let EndLine = searchpair('(','',').\{-};', '')
-		let EndLine = searchpair('(','',')', 'r')
+		" [Feral:154/03@02:02] Find the outermost () pair but ensure that the
+		"	closing pren is followed by a ; on the same line.
+		let EndLine = searchpair('(','',').\{-};', 'rW')
 
 "		echo confirm("This is end ".EndLine."\n".getline(EndLine))
 
 		" goto the start of the pren, this should be the line with the function decloration
 "		let StartLine = searchpair('(','',').\{-};', 'b')
-		let StartLine = searchpair('(','',')', 'br')
+"		let StartLine = searchpair('(','',')', 'br')
+		" [Feral:154/03@01:56] searchpair to find end; already found the outer
+		"	match, just find it's pair now.
+		let StartLine = searchpair('(','',')', 'bW')
+
 
 "		echo confirm("This is start ".StartLine."\n".getline(StartLine))
 
@@ -294,6 +305,7 @@ function s:GrabFromHeaderPasteInSource(...) "{{{
 "			echo "GHPH: ERROR: Unable to find"
 "		endif
 		let s:LineWithDeclorationSize = ( (EndLine - StartLine) + 1)
+"		echo confirm(s:LineWithDeclorationSize)
 
 "		"[Feral:282/02@17:03] Rather large change to support nested classes
 "		"	and as a side benefit normal functions now work.
@@ -495,10 +507,10 @@ function s:GrabFromHeaderPasteInSource(...) "{{{
 		" }}}
 	endif
 
-endfunc
-"}}}
+endfunc	" }}}
 endif
-" }}}
+
+" }}} EO Functions
 "*****************************************************************
 " Documtation: {{{
 "*****************************************************************
@@ -650,20 +662,6 @@ endif
 "}}}
 "*****************************************************************
 
-"// [Feral:104/03@07:59] Broken:
-"// in .h:
-"	typedef std::vector<IPlugin*> vPluginList;
-"
-"	//! Return a PTR to a list of plugins, type defined by _eType
-"	vPluginList * GetPluginsByType(
-"		enumPluginTypes_TAG _eType,		//!< describes the type of plugin (list) to return
-"		);
-"
-"private:
-"// in .cpp:
-"enumPluginTypes_TAG _eType, //!< describes the type of ENGINEMAIN_API::plugin (list) to return)
-"{
-"}
 
 
 
