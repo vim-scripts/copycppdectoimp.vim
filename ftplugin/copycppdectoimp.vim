@@ -1,30 +1,40 @@
 " vim:ff=unix ts=4 ss=4
 " vim60:fdm=marker
 " \file		copycppdectoimp.vim
+" \date		Sun, 04 May 2003 02:28 Pacific Daylight Time
 "
 " \brief	This provides a function that you can call in your header file
 "			(with cursor on the function to be placed into your souce file) and
 "			then called from your source file where you want the function
 "			definition to be placed and the function makes it all pretty and
 "			does most of the work for you. Pretty handy.
-" \note		This is VIM-Script #437
-"			See: http://vim.sourceforge.net/script.php?script_id=437
+" \note		This is VIMSCRIPT#437,
+"			http://vim.sourceforge.net/script.php?script_id=437
 "
 " \note		From VIM-Tip #335: Copy C++ function declaration into
 "			implementation file by Leif Wickland
 "			See: http://vim.sourceforge.net/tip_view.php?tip_id=335
+" \note		For a similar idea see Luc Hermitte's VIMSCRIPT#336,
+"			(cpp_InsertAccessors.vim in particular)
+"			http://vim.sourceforge.net/scripts/script.php?script_id=336
+"			http://hermitte.free.fr/vim/
 "
 " \author	Robert KellyIV <Sreny@SverGbc.Pbz> (Rot13ed)
 " \author	Original idea/implimentaion: Leif Wickland
 " \note		Emial addresses are Rot13ed. Place cursor in the <> and do a g?i<
 " \note		This file and work is based on Leif Wickland's VIM-TIP#335
-" \date		Sun, 13 Oct 2002 17:41 Pacific Daylight Time
-" \version	$Id: copycppdectoimp.vim,v 1.2 2002/10/15 15:54:13 root Exp $
-" Version:	0.43
+" \version	$Id: copycppdectoimp.vim,v 1.3 2002/10/29 06:14:16 root Exp $
+" Version:	0.45
 " History: {{{
+"	[Feral:124/03@02:13] 0.55
+"		Bug fix: more robust handling of comments and prens and things in
+"			multi line function declorations.
+"	[Feral:095/03@00:33] 0.44
+"		* Small fix to take into account non blank equalprg; thanks to Nathan
+"			Dunn for help tracking this down.
 "	[Feral:290/02@06:15] 0.43
-"		Bugfix, The case of filename extension no loger matters during the
-"		check for header/source.
+"		* Bugfix, The case of filename extension no loger matters during the
+"			check for header/source.
 "	[Feral:288/02@08:49] 0.42
 "		namespaces and destructors now are handled properly.
 "	Improvments:
@@ -178,6 +188,8 @@ function s:GrabFromHeaderPasteInSource(...) "{{{
 	let l:WhatToDo = 0 " 0 = get header, else put header.
 	" [Feral:283/02@15:40] sort of guessing on extesions here.. I tend to only
 	"	use .h ...
+	" [Feral:123/03@23:59] Could \<h perhaps. (i.e. if ext starts with h
+	"	consider it a header.)
 	if match(expand("%:e"), '\c\<h\>\|\<hpp\>\|\<hh\>\|\<hxx\>') > -1
 		let l:WhatToDo = 0
 	else
@@ -253,9 +265,17 @@ function s:GrabFromHeaderPasteInSource(...) "{{{
 			execute "normal! 0f("
 		endif
 		" Important that End comes first, this gets us into the ()...
-		let EndLine = searchpair('(','',').\{-};', '')
+"		let EndLine = searchpair('(','',').\{-};', '')
+		let EndLine = searchpair('(','',')', 'r')
+
+"		echo confirm("This is end ".EndLine."\n".getline(EndLine))
+
 		" goto the start of the pren, this should be the line with the function decloration
-		let StartLine = searchpair('(','',').\{-};', 'b')
+"		let StartLine = searchpair('(','',').\{-};', 'b')
+		let StartLine = searchpair('(','',')', 'br')
+
+"		echo confirm("This is start ".StartLine."\n".getline(StartLine))
+
 		if EndLine == 0 || StartLine == 0
 			echo "GHPH: ERROR: Sorry this does not look like a function decloration, missing '(' and or ')' with trailing ';'"
 			return
@@ -268,6 +288,11 @@ function s:GrabFromHeaderPasteInSource(...) "{{{
 		:let s:LineWithDecloration = @l
 		:let @l=Was_Reg_l
 "		echo confirm(s:LineWithDecloration)
+
+"[Feral:093/03@16:49] In dev, probaly should be some informative message if s:LineWithDecloration is bad. (define bad)
+"		if s:LineWithDecloration == ""
+"			echo "GHPH: ERROR: Unable to find"
+"		endif
 		let s:LineWithDeclorationSize = ( (EndLine - StartLine) + 1)
 
 "		"[Feral:282/02@17:03] Rather large change to support nested classes
@@ -387,7 +412,7 @@ function s:GrabFromHeaderPasteInSource(...) "{{{
 		let SaveReport = &report
 		setlocal report=9999
 		let Save2L = line(".")
-		execute ':'.Save2L.','.(Save2L+s:LineWithDeclorationSize-1).'s/\s\{-}\/[/*][^,)]\{-}$//e'
+		execute ':'.Save2L.','.(Save2L+s:LineWithDeclorationSize-1).'s/\s\{-}\/[/*].\{-}$//e'
 		:execute ":normal! ".Save2L."G"
 "		echo confirm(line('.'))
 "		let &report=SaveReport
@@ -406,7 +431,14 @@ function s:GrabFromHeaderPasteInSource(...) "{{{
 			" I do not like the space between the Function Name the pren and the param. (caused by J)
 			execute ':s/\(\i(\) /\1/e'
 		endif
+
+		" [Feral:095/03@00:07] Small fix for when equalprg is defined, oopsie!
+		"	Thanks to Nathan Dunn for help tracking this down.
+		let Was_EqualPrg = &equalprg
+		"	seems == does not use a local equalprg, dern.
+		set equalprg=""
 		execute ':normal! =='
+		execute "set equalprg=".Was_EqualPrg
 
 		" XXX if you want virtual commented in the implimentation:
 		if howtoshowVirtual == 1
@@ -617,5 +649,23 @@ if !exists(":PH") && exists('g:ghph_useGHandPH')
 endif
 "}}}
 "*****************************************************************
+
+"// [Feral:104/03@07:59] Broken:
+"// in .h:
+"	typedef std::vector<IPlugin*> vPluginList;
+"
+"	//! Return a PTR to a list of plugins, type defined by _eType
+"	vPluginList * GetPluginsByType(
+"		enumPluginTypes_TAG _eType,		//!< describes the type of plugin (list) to return
+"		);
+"
+"private:
+"// in .cpp:
+"enumPluginTypes_TAG _eType, //!< describes the type of ENGINEMAIN_API::plugin (list) to return)
+"{
+"}
+
+
+
 "
 " EOF
