@@ -1,0 +1,67 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=437
+
+Ment for cpp class member functions, also works for normal c functions; modify for others...
+This is not perfect, but works pretty good. -- Works out of the box, however you may want to customize it some. Customization is as easy as defining some global vars...
+
+" OPTIOINAL: Place something like the below in your .vimrc or where ever you like to keep your global option vars and change as desired.
+" Note, these are the defaults.
+"*****************************************************************
+" GHPH Options: {{{
+"*****************************************************************
+" See copycppdectoimp.vim for more documtation.
+" Virtual: 1 for commented, else removed.
+let g:ghph_ShowVirtual                    = 0
+" Static:  1 for commented, else removed.
+let g:ghph_ShowStatic                     = 0
+" Default Params: 3 for /*5*/, 2 for /* = 5*/, else removed.
+let g:ghph_ShowDefaultParams     = 3
+" Command: 1 to define :GHPH (default if nothing defined), 0 to NOT define.
+let g:ghph_useGHPH                       = 1
+" Command: 1 to define :GH and :PH, 0 to NOT define.
+"let g:ghph_useGHandPH               = 1
+" }}}
+
+
+:GHPH when in a header file (.h) and on a member function decloration.
+Then :GHPH when in a source file (.cpp or the like) where you want the properly expanded implimentation of the member function.
+(There is also :GH and :PH or :GHPH g :GHPH p as alternitive methods of using this, see below.)
+
+Please see the comments in the file for more info.
+
+Example:
+class CTest
+{
+    void Test_Member_Function_G(
+        int        _iSomeNumber,                //!< doxy comment
+        char    * _cpSomeString,            //!< Same
+        float    /*_fNotused*/,        //!< not used param. Heh aka error stress test.
+        int        _iFlags = 0            /*!< I think */
+        );    // yea whatever.
+}
+// nested classes/structs and inlined functions supported.
+// If you have something you want to work but doesnt email me an I'll see if I can get it to.
+
+Place cursor on line with 'Test_Member_Function_G' and :GHPH
+Place cursor in .cpp file where you want function and :GHPH gives you:
+void CTest::Test_Member_Function_G(int _iSomeNumber, char * _cpSomeString, float /*_fNotused*/, int _iFlags/*0*/)
+{
+}
+With your cursor on the opening brace ready for a o
+
+How static, virtual and default params are comented in the function are configurable (can totally remove them if you like), See the file for more info.
+
+Note that you call :GHPH twice (I was playing with this idea--one less thing to remember) The function decides what to do based on the file extension (only .h at the moment but easy to change/add more). If you like it is as easy as unreming the command definitions to get :GH and :PH.
+
+You can overide :GHPH's attempt to be clever and force getting the definition or putting the implimentation via :GHPH g and :GHPH p respectivly.
+
+Although still a work in progress it both functions and behaves well.
+
+
+To TRY this all you need to is place this in your ftplugin/cpp directory and then :GHPH on a member function and :GHPH in the source file. Don't like it? remove the file from ftplugin/cpp
+
+
+Thanks to Leif Wickland for VIM-Tip#335 from which this file derived.
+See: http://vim.sourceforge.net/tip_view.php?tip_id=335
+
+What YOU would like to see in this script wanted, drop me an email.
+Happy VIMing!
