@@ -15,17 +15,29 @@
 " \author	Original idea/implimentaion: Leif Wickland
 " \note		Emial addresses are Rot13ed. Place cursor in the <> and do a g?i<
 " \note		This file and work is based on Leif Wickland's VIM-TIP#335
-" \date		Mon, 07 Oct 2002 19:39 Pacific Daylight Time
+" \date		Wed, 09 Oct 2002 17:33 Pacific Daylight Time
 " \version	$Id$
-" Version:	0.3
+" Version:	0.32
 " History: {{{
+"	[Feral:282/02@17:03] 0.32
+"		Rather large change to support nested classes. Ok not THAT large.
+"		Thanks to Rostislav for pointing this out.
+"		Using searchpair to find the class inspired by Luc Hermitte.
+"	Improvments:
+"		* More intelligent/robust checking/finding the class.
+"		* Nested classes are now supported.
+"		* Normal functions now work.
+"	[Feral:281/02@16:24] 0.31
+"		as Rostislav Julinek pointed out [[ does not work when the brace is not
+"			in col 1. If you like your braces after your class definition this
+"			should do the trick for you.
 "	[Feral:278/02@00:29] 0.3
 "	Improvments:
 "		* fairly drastic improvement. Now works with multi-line function
 "			declarations as long as they are properly closed(open prens will
 "			make this fail), aka if it compiles it should work.
 "	Limitation:
-"		* Must be invoked on the line that starts the the function decloratoin.
+"		* Must be invoked on the line that starts the the function decloration.
 "	[Feral:275/02@14:50] 0.21
 "		* Itty bitty file format changes, email address is Rot13ed now,
 "			documtation and command defintions are folded.
@@ -130,14 +142,18 @@ function! <SID>GrabFromHeaderPasteInSource(howtoshowVirtual, howtoshowStatic, ho
 "		echo confirm(s:LineWithDecloration)
 		let s:LineWithDeclorationSize = ( (EndLine - StartLine) + 1)
 
-		" [Feral:274/02@14:41] this works peachy for a member function, not so
-		" well for a normal function, how can we fix this? Or do we bother?
-		execute ":normal! [["
-		execute ":normal! kw"
-		:let Was_Reg_c = @c
-		execute ':normal! "cye'
-		:let s:ClassName = @c
-		:let @c=Was_Reg_c
+		"[Feral:282/02@17:03] Rather large change to support nested classes
+		"and as a side benefit normal functions now work.
+		let s:ClassName = ""
+		let mx='\<class\>\s\{-}\(\<\I\i*\)\s\{-}.*'
+		while searchpair('\<class\>.\{-}\n\=\s\{-}{','','}', 'bW') > 0
+			let DaLine = getline('.')
+			let Lummox = matchstr(DaLine, mx)
+			let s:ClassName = substitute(Lummox, mx, '\1', '') . '::' . s:ClassName
+"			echo confirm(s:ClassName)
+		endwhile
+"		echo confirm(s:ClassName)
+
 
 "		execute ":normal! 'l"
 		:execute ":normal! ".SaveT."Gzt"
@@ -247,7 +263,9 @@ function! <SID>GrabFromHeaderPasteInSource(howtoshowVirtual, howtoshowStatic, ho
 		:execute ":normal! ".SaveL."G"
 		:execute ":normal! ".SaveC."|"
 		:execute ':normal! f(b'
-		:execute ':normal! i'.s:ClassName.'::'
+		if s:ClassName !=# ""
+			:execute ':normal! i'.s:ClassName
+		endif
 
 		" find the ending ; and replace it with a brace structure on the next line.
 "		:execute ":normal! f;s\<cr>{\<cr>}\<cr>\<esc>2k"
